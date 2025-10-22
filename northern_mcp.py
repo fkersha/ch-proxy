@@ -1,6 +1,7 @@
 # file: northern_mcp.py
 from typing import Any, List, Union, Dict
 import asyncio
+import os
 import httpx
 from mcp.server.fastmcp import FastMCP
 
@@ -23,13 +24,14 @@ def _norm_sic(sic_codes: Union[str, List[str], None]) -> str:
     return ",".join(items)
 
 
-@mcp.tool(prompt="Search Companies House proxy by location/SIC and size.")
+@mcp.tool()
 async def ch_search(
     location: str,
     sic_codes: Union[str, List[str], None] = None,
     size: int = 100
 ) -> Dict[str, Any]:
     """
+    Search Companies House proxy by location/SIC and size.
     Calls your Cloudflare Worker:
       GET /advanced?location=<>&sic_codes=<csv>&size=<int>
     Returns parsed JSON (or a structured error with status/text).
@@ -43,9 +45,13 @@ async def ch_search(
         params["sic_codes"] = sic_csv
 
     headers = {
-        # If your Worker expects a key, add it here, e.g. "Authorization": "Bearer <KEY>"
+        # If your Worker expects a key, set CH_WORKER_KEY in env and uncomment below.
         "User-Agent": "northern-mcp/1.0"
     }
+    key = os.getenv("CH_WORKER_KEY")
+    if key:
+        # Adjust header name if your Worker expects e.g. "x-api-key"
+        headers["Authorization"] = f"Bearer {key}"
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:
@@ -58,7 +64,6 @@ async def ch_search(
                     "content_type": ct,
                     "text": resp.text[:2000]
                 }
-            # Try JSON first, fall back to text
             try:
                 data = resp.json()
             except Exception:
@@ -68,8 +73,11 @@ async def ch_search(
             return {"ok": False, "error": f"http_error: {e.__class__.__name__}", "detail": str(e)}
 
 
-@mcp.tool(prompt="Simple HTTP GET (for debugging connectivity).")
+@mcp.tool()
 async def http_get(url: str) -> Dict[str, Any]:
+    """
+    Simple HTTP GET (for debugging connectivity).
+    """
     async with httpx.AsyncClient(timeout=20.0) as client:
         try:
             r = await client.get(url)
