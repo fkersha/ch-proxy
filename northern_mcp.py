@@ -1,11 +1,13 @@
+# file: northern_mcp.py
 from typing import Any, List, Union, Dict
 import asyncio
 import httpx
-from mcp.server.fastmcp import FastMCP, tool
+from mcp.server.fastmcp import FastMCP
 
 CH_WORKER_BASE = "https://ch-api.felixmkershaw.workers.dev/advanced"
 
 mcp = FastMCP("northern")  # Server name shown to clients
+
 
 def _norm_sic(sic_codes: Union[str, List[str], None]) -> str:
     """
@@ -20,7 +22,8 @@ def _norm_sic(sic_codes: Union[str, List[str], None]) -> str:
         items = [c.strip() for c in str(sic_codes).split(",") if c.strip()]
     return ",".join(items)
 
-@tool(prompt="Search Companies House proxy by location/SIC and size.")
+
+@mcp.tool(prompt="Search Companies House proxy by location/SIC and size.")
 async def ch_search(
     location: str,
     sic_codes: Union[str, List[str], None] = None,
@@ -64,7 +67,8 @@ async def ch_search(
         except httpx.HTTPError as e:
             return {"ok": False, "error": f"http_error: {e.__class__.__name__}", "detail": str(e)}
 
-@tool(prompt="Simple HTTP GET (for debugging connectivity).")
+
+@mcp.tool(prompt="Simple HTTP GET (for debugging connectivity).")
 async def http_get(url: str) -> Dict[str, Any]:
     async with httpx.AsyncClient(timeout=20.0) as client:
         try:
@@ -77,6 +81,7 @@ async def http_get(url: str) -> Dict[str, Any]:
             return out
         except Exception as e:
             return {"error": str(e)}
+
 
 if __name__ == "__main__":
     import argparse
@@ -92,3 +97,4 @@ if __name__ == "__main__":
     else:
         # Stdio transport (for local CLI clients)
         mcp.run_stdio()
+
