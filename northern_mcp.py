@@ -1,4 +1,5 @@
 # file: northern_mcp.py
+
 from typing import Any, List, Union, Dict
 import os
 import httpx
@@ -33,13 +34,14 @@ async def ch_search(
     """
     Search Companies House proxy by location/SIC and size.
     Calls your Cloudflare Worker:
-      GET /advanced?location=<>&sic_codes=<csv>&size=<int>
+    GET /advanced?location=<>&sic_codes=<csv>&size=<int>
     Returns parsed JSON (or a structured error with status/text).
     """
     params = {
         "location": str(location).strip(),
         "size": int(size),
     }
+
     sic_csv = _norm_sic(sic_codes)
     if sic_csv:
         params["sic_codes"] = sic_csv
@@ -47,9 +49,9 @@ async def ch_search(
     headers = {
         "User-Agent": "northern-mcp/1.0"
     }
+
     key = os.getenv("CH_WORKER_KEY")
     if key:
-        # Change header name here if your Worker expects a different one
         headers["Authorization"] = f"Bearer {key}"
 
     async with httpx.AsyncClient(timeout=30.0) as client:
@@ -102,8 +104,7 @@ if __name__ == "__main__":
 
     if args.http:
         # Serve the FastMCP FastAPI app via Uvicorn (HTTP transport for StackAI)
-        # Many FastMCP versions expose the FastAPI app as `mcp.app`.
-        uvicorn.run(mcp.app, host=args.host, port=args.port)
+        uvicorn.run(mcp.fastapi, host=args.host, port=args.port)
     else:
         # Stdio transport (local CLI clients)
         mcp.run_stdio()
