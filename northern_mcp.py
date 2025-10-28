@@ -1,13 +1,13 @@
 # file: northern_mcp.py
 from typing import Any, List, Union, Dict
-import asyncio
 import os
 import httpx
 from mcp.server.fastmcp import FastMCP
 
 CH_WORKER_BASE = "https://ch-api.felixmkershaw.workers.dev/advanced"
 
-mcp = FastMCP("northern")  # Server name shown to clients
+# Initialize MCP server
+mcp = FastMCP("northern")  # server name shown to clients
 
 
 def _norm_sic(sic_codes: Union[str, List[str], None]) -> str:
@@ -45,12 +45,11 @@ async def ch_search(
         params["sic_codes"] = sic_csv
 
     headers = {
-        # If your Worker expects a key, set CH_WORKER_KEY in env and uncomment below.
         "User-Agent": "northern-mcp/1.0"
     }
     key = os.getenv("CH_WORKER_KEY")
     if key:
-        # Adjust header name if your Worker expects e.g. "x-api-key"
+        # Change header name here if your Worker expects a different one
         headers["Authorization"] = f"Bearer {key}"
 
     async with httpx.AsyncClient(timeout=30.0) as client:
@@ -93,16 +92,19 @@ async def http_get(url: str) -> Dict[str, Any]:
 
 if __name__ == "__main__":
     import argparse
+    import uvicorn
+
     parser = argparse.ArgumentParser()
-    parser.add_argument("--http", action="store_true", help="Run MCP over HTTP (for StackAI).")
+    parser.add_argument("--http", action="store_true", help="Run MCP over HTTP (serve FastAPI app).")
     parser.add_argument("--host", default="0.0.0.0")
     parser.add_argument("--port", type=int, default=8000)
     args = parser.parse_args()
 
     if args.http:
-        # HTTP transport (best for StackAI)
-        mcp.run_http(host=args.host, port=args.port)
+        # Serve the FastMCP FastAPI app via Uvicorn (HTTP transport for StackAI)
+        # Many FastMCP versions expose the FastAPI app as `mcp.app`.
+        uvicorn.run(mcp.app, host=args.host, port=args.port)
     else:
-        # Stdio transport (for local CLI clients)
+        # Stdio transport (local CLI clients)
         mcp.run_stdio()
 
